@@ -227,6 +227,10 @@ public class ArenaImpl extends BaseButton implements Arena {
         Bukkit.getPluginManager().callEvent(event);
 
         final Queue source = match.getSource();
+        
+        // Unregister all players from the lookup map
+        match.getAllPlayers().forEach(arenaManager::unregisterPlayer);
+        
         match.setFinished();
 
         for(Block block : match.placedBlocks) {
@@ -310,12 +314,14 @@ public class ArenaImpl extends BaseButton implements Arena {
     public void add(final Player player) {
         if (isUsed()) {
             match.addPlayer(player);
+            arenaManager.registerPlayer(player, this);
         }
     }
 
     public void remove(final Player player) {
         if (isUsed()) {
             match.markAsDead(player);
+            arenaManager.unregisterPlayer(player);
         }
     }
 

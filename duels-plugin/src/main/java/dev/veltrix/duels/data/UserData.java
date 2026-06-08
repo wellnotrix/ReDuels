@@ -210,13 +210,14 @@ public class UserData implements User {
     }
 
     public void addMatch(final MatchData matchData) {
-        if (!matches.isEmpty() && matches.size() >= matchesToDisplay) {
-            matches.removeFirst();
+        synchronized (matches) {
+            if (!matches.isEmpty() && matches.size() >= matchesToDisplay) {
+                matches.remove(0);
+            }
+
+            matches.add(matchData);
         }
-
-        matches.add(matchData);
     }
-
     void refreshMatches() {
         if (matches.size() < matchesToDisplay) {
             return;

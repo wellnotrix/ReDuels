@@ -38,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ArenaManagerImpl implements Loadable, ArenaManager {
@@ -53,6 +54,8 @@ public class ArenaManagerImpl implements Loadable, ArenaManager {
     private final File file;
 
     private final List<ArenaImpl> arenas = new ArrayList<>();
+    private final Map<String, ArenaImpl> arenasByName = new ConcurrentHashMap<>();
+    private final Map<UUID, ArenaImpl> arenasByPlayer = new ConcurrentHashMap<>();
 
     @Getter
     private MultiPageGui<DuelsPlugin> gui;
@@ -85,7 +88,9 @@ public class ArenaManagerImpl implements Loadable, ArenaManager {
                             DuelsPlugin.sendMessage(String.format(ERROR_NOT_ALPHANUMERIC, arenaData.getName()));
                             continue;
                         }
-                        arenas.add(arenaData.toArena(plugin));
+                        ArenaImpl arena = arenaData.toArena(plugin);
+                        arenas.add(arena);
+                        arenasByName.put(arena.getName(), arena);
                     }
                 }
             }
@@ -101,6 +106,8 @@ public class ArenaManagerImpl implements Loadable, ArenaManager {
             plugin.getGuiListener().removeGui(gui);
         }
         arenas.clear();
+        arenasByName.clear();
+        arenasByPlayer.clear();
     }
 
     void saveArenas() {
@@ -116,26 +123,28 @@ public class ArenaManagerImpl implements Loadable, ArenaManager {
         });
     }
 
+    public void registerPlayer(@NotNull final Player player, @NotNull final ArenaImpl arena) {
+        arenasByPlayer.put(player.getUniqueId(), arena);
+    }
+
+    public void unregisterPlayer(@NotNull final Player player) {
+        arenasByPlayer.remove(player.getUniqueId());
+    }
+
     @Nullable
     @Override
     public ArenaImpl get(@NotNull final String name) {
         Objects.requireNonNull(name, "name");
-        for (ArenaImpl arena : arenas) {
-            if (arena.getName().equals(name)) {
-                return arena;
-            }
-        }
-        return null;
+        return arenasByName.get(name);
     }
 
     @Nullable
     @Override
     public ArenaImpl get(@NotNull final Player player) {
         Objects.requireNonNull(player, "player");
-        for (ArenaImpl arena : arenas) {
-            if (arena.has(player)) {
-                return arena;
-            }
+        ArenaImpl arena = arenasByPlayer.get(player.getUniqueId());
+        if (arena != null && arena.has(player)) {
+            return arena;
         }
         return null;
     }
