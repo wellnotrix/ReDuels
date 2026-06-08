@@ -104,17 +104,16 @@ public class ArenaManagerImpl implements Loadable, ArenaManager {
     }
 
     void saveArenas() {
-        List<ArenaData> data = new ArrayList<>();
-        for (ArenaImpl arena : arenas) {
-            data.add(new ArenaData(arena));
-        }
-
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)) {
-            JsonUtil.getObjectWriter().writeValue(writer, data);
-            writer.flush();
-        } catch (IOException ex) {
-            Log.error(this, ex.getMessage(), ex);
-        }
+        final List<ArenaData> data = arenas.stream().map(ArenaData::new).toList();
+        
+        plugin.doAsync(() -> {
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)) {
+                JsonUtil.getObjectWriter().writeValue(writer, data);
+                writer.flush();
+            } catch (IOException ex) {
+                Log.error(this, "Failed to save arenas asynchronously: " + ex.getMessage(), ex);
+            }
+        });
     }
 
     @Nullable

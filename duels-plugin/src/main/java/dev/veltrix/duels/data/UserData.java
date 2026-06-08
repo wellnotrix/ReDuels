@@ -36,8 +36,15 @@ public class UserData implements User {
     @Getter
     private volatile long duelCooldownUntil;
     private boolean requests = true;
-    private ConcurrentHashMap<String, Integer> rating;
-    private List<MatchData> matches = new ArrayList<>();
+    ConcurrentHashMap<String, Integer> rating;
+
+    public Map<String, Integer> getRatingsMap() {
+        if (this.rating == null) {
+            this.rating = new ConcurrentHashMap<>();
+        }
+        return this.rating;
+    }
+    private final List<MatchData> matches = Collections.synchronizedList(new ArrayList<>());
     private boolean partyRequests = true;
 
     private UserData() {
@@ -51,12 +58,39 @@ public class UserData implements User {
         this.name = player.getName();
     }
 
+    /**
+     * Copy constructor for snapshotting
+     */
+    private UserData(UserData other) {
+        this.folder = other.folder;
+        this.defaultRating = other.defaultRating;
+        this.matchesToDisplay = other.matchesToDisplay;
+        this.uuid = other.uuid;
+        this.name = other.name;
+        this.wins = other.wins;
+        this.losses = other.losses;
+        this.duelCooldownUntil = other.duelCooldownUntil;
+        this.requests = other.requests;
+        this.partyRequests = other.partyRequests;
+        if (other.rating != null) {
+            this.rating = new ConcurrentHashMap<>(other.rating);
+        }
+        synchronized (other.matches) {
+            this.matches.addAll(other.matches);
+        }
+    }
+
+    public void asyncSave(dev.veltrix.duels.DuelsPlugin plugin) {
+        final UserData snapshot = new UserData(this);
+        plugin.doAsync(snapshot::trySave);
+    }
+
     @Override
     public void setWins(final int wins) {
         this.wins = wins;
 
         if (isOffline()) {
-            trySave();
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
         }
     }
 
@@ -65,7 +99,7 @@ public class UserData implements User {
         this.losses = losses;
 
         if (isOffline()) {
-            trySave();
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
         }
     }
 
@@ -79,7 +113,7 @@ public class UserData implements User {
         this.requests = requests;
 
         if (isOffline()) {
-            trySave();
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
         }
     }
 
@@ -120,7 +154,7 @@ public class UserData implements User {
         rating.clear();
 
         if (isOffline()) {
-            trySave();
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
         }
     }
 
@@ -132,7 +166,7 @@ public class UserData implements User {
         this.partyRequests = partyRequests;
 
         if (isOffline()) {
-            trySave();
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
         }
     }
 
@@ -148,7 +182,7 @@ public class UserData implements User {
         this.rating.put(kit == null ? "-" : kit.getName(), rating);
 
         if (isOffline()) {
-            trySave();
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
         }
     }
 
@@ -171,7 +205,7 @@ public class UserData implements User {
         this.duelCooldownUntil = Math.max(duelCooldownUntil, 0L);
 
         if (isOffline()) {
-            trySave();
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
         }
     }
 

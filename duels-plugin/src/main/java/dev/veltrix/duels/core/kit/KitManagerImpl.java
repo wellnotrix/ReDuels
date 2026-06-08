@@ -101,12 +101,14 @@ public class KitManagerImpl implements Loadable, KitManager {
             data.put(entry.getKey(), KitData.fromKit(entry.getValue()));
         }
 
-        try (final Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)) {
-            JsonUtil.getObjectWriter().writeValue(writer, data);
-            writer.flush();
-        } catch (IOException ex) {
-            Log.error(this, ex.getMessage(), ex);
-        }
+        plugin.doAsync(() -> {
+            try (final Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)) {
+                JsonUtil.getObjectWriter().writeValue(writer, data);
+                writer.flush();
+            } catch (IOException ex) {
+                Log.error(this, "Failed to save kits asynchronously: " + ex.getMessage(), ex);
+            }
+        });
     }
 
     @Nullable

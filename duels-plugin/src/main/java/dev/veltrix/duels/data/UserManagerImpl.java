@@ -1,21 +1,23 @@
 package dev.veltrix.duels.data;
 
-import com.google.common.collect.Lists;
-import dev.veltrix.duels.core.kit.KitImpl;
-import dev.veltrix.duels.core.match.DuelMatch;
-import dev.veltrix.duels.core.match.party.PartyDuelMatch;
-import dev.veltrix.duels.party.Party;
-import dev.veltrix.duels.util.*;
-import dev.veltrix.duels.util.*;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import lombok.Getter;
-import dev.veltrix.duels.DuelsPlugin;
-import dev.veltrix.duels.Permissions;
-import dev.veltrix.duels.api.event.user.UserCreateEvent;
+import dev.veltrix.duels.api.folialib.task.WrappedTask;
 import dev.veltrix.duels.api.kit.Kit;
 import dev.veltrix.duels.api.user.User;
 import dev.veltrix.duels.api.user.UserManager;
 import dev.veltrix.duels.config.Config;
 import dev.veltrix.duels.config.Lang;
+import dev.veltrix.duels.DuelsPlugin;
+import dev.veltrix.duels.Permissions;
+import dev.veltrix.duels.api.event.user.UserCreateEvent;
+import dev.veltrix.duels.core.kit.KitImpl;
+import dev.veltrix.duels.core.match.DuelMatch;
+import dev.veltrix.duels.core.match.party.PartyDuelMatch;
+import dev.veltrix.duels.party.Party;
+import dev.veltrix.duels.util.*;
 import dev.veltrix.duels.util.json.JsonUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -25,11 +27,11 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import dev.veltrix.duels.api.folialib.task.WrappedTask;
 
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -42,7 +44,16 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
     private final Config config;
     private final Lang lang;
     private final File folder;
-    private final Map<UUID, UserData> users = new ConcurrentHashMap<>();
+
+    // Currently connected players only
+    private final Map<UUID, UserData> onlineUsers = new ConcurrentHashMap<>();
+
+    // Cached offline player data for commands like /stats
+    private final LoadingCache<UUID, UserData> offlineUserCache;
+
+    // Lightweight stats used for leaderboards and rankings
+    private final Map<UUID, UserStatsSummary> statsSummaryMap = new ConcurrentHashMap<>();
+    
     private final Map<String, UUID> names = new ConcurrentHashMap<>();
     private final Map<Kit, TopEntry> topRatings = new ConcurrentHashMap<>();
     private volatile int defaultRating;
@@ -67,6 +78,19 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
             folder.mkdir();
         }
 
+        // Init offline user cache
+        this.offlineUserCache = CacheBuilder.newBuilder()
+                .maximumSize(1000)
+                .expireAfterAccess(10, TimeUnit.MINUTES)
+                .build(new CacheLoader<UUID, UserData>() {
+                    @Override
+                    public UserData load(UUID uuid) throws Exception {
+                        // This will be called if the user is not in the cache
+                        // We need a way to load without a Player object
+                        return loadFromFile(uuid);
+                    }
+                });
+
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
@@ -83,6 +107,7 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
             final File[] files = folder.listFiles();
 
             if (files != null) {
+                int count = 0;
                 for (final File file : files) {
                     final String fileName = file.getName();
 
@@ -90,33 +115,37 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
                         continue;
                     }
 
-                    final String name = fileName.substring(0, fileName.length() - 5);
+                    final String nameStr = fileName.substring(0, fileName.length() - 5);
+                    final UUID uuid = UUIDUtil.parseUUID(nameStr);
 
-                    final UUID uuid = UUIDUtil.parseUUID(name);
-
-                    if (uuid == null || users.containsKey(uuid)) {
+                    if (uuid == null) {
                         continue;
                     }
 
                     try (Reader reader = new InputStreamReader(new FileInputStream(file))) {
+                        // Load ONLY the data needed for leaderboards
                         final UserData user = JsonUtil.getObjectMapper().readValue(reader, UserData.class);
 
                         if (user == null) {
-                            Log.warn(this, "Could not load userdata from file: " + fileName);
                             continue;
                         }
 
-                        user.folder = folder;
-                        user.defaultRating = defaultRating;
-                        user.matchesToDisplay = matchesToDisplay;
-                        user.refreshMatches();
-                        // Player might have logged in while reading the file
-                        names.putIfAbsent(user.getName().toLowerCase(), uuid);
-                        users.putIfAbsent(uuid, user);
+                        // Populate summary and name map
+                        UserStatsSummary summary = new UserStatsSummary(
+                                uuid,
+                                user.getName(),
+                                user.getWins(),
+                                user.getLosses(),
+                                user.getRatingsMap()
+                        );
+                        statsSummaryMap.put(uuid, summary);
+                        names.put(user.getName().toLowerCase(), uuid);
+                        count++;
                     } catch (IOException ex) {
-                        Log.error(this, "Could not load userdata from file: " + fileName, ex);
+                        Log.error(this, "Could not load userdata summary from file: " + fileName, ex);
                     }
                 }
+                Log.info("Loaded " + count + " user summaries into memory.");
             }
 
             loaded = true;
@@ -132,15 +161,15 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
 
                 TopEntry top;
 
-                if ((top = get(config.getTopUpdateInterval(), wins, User::getWins, config.getTopWinsType(), config.getTopWinsIdentifier())) != null) {
+                if ((top = getTop(config.getTopUpdateInterval(), wins, UserStatsSummary::getWins, config.getTopWinsType(), config.getTopWinsIdentifier())) != null) {
                     wins = top;
                 }
 
-                if ((top = get(config.getTopUpdateInterval(), losses, User::getLosses, config.getTopLossesType(), config.getTopLossesIdentifier())) != null) {
+                if ((top = getTop(config.getTopUpdateInterval(), losses, UserStatsSummary::getLosses, config.getTopLossesType(), config.getTopLossesIdentifier())) != null) {
                     losses = top;
                 }
 
-                if ((top = get(config.getTopUpdateInterval(), noKit, User::getRating, config.getTopNoKitType(), config.getTopNoKitIdentifier())) != null) {
+                if ((top = getTop(config.getTopUpdateInterval(), noKit, s -> s.getRating("-"), config.getTopNoKitType(), config.getTopNoKitIdentifier())) != null) {
                     noKit = top;
                 }
 
@@ -149,7 +178,7 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
                 for (final Kit kit : kits) {
                     final TopEntry entry = topRatings.get(kit);
 
-                    if ((top = get(config.getTopUpdateInterval(), entry, user -> user.getRating(kit), config.getTopKitType().replace("%kit%", kit.getName()),
+                    if ((top = getTop(config.getTopUpdateInterval(), entry, s -> s.getRating(kit.getName()), config.getTopKitType().replace("%kit%", kit.getName()),
                             config.getTopKitIdentifier())) != null) {
                         topRatings.put(kit, top);
                     }
@@ -162,8 +191,15 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
     public void handleUnload() {
         plugin.cancelTask(topTask);
         loaded = false;
-        saveUsers(Bukkit.getOnlinePlayers());
-        users.clear();
+        
+        // Save all online users async here
+        for (UserData user : onlineUsers.values()) {
+            user.asyncSave(plugin);
+        }
+        
+        onlineUsers.clear();
+        offlineUserCache.invalidateAll();
+        statsSummaryMap.clear();
         names.clear();
         topRatings.clear();
     }
@@ -180,7 +216,17 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
     @Override
     public UserData get(@NotNull final UUID uuid) {
         Objects.requireNonNull(uuid, "uuid");
-        return users.get(uuid);
+        
+        UserData user = onlineUsers.get(uuid);
+        if (user != null) return user;
+        
+        try {
+            return offlineUserCache.get(uuid);
+        } catch (Exception e) {
+            // This will return null when the user aint on disk
+            // or if there's an I/O error too
+            return null;
+        }
     }
 
     @Nullable
@@ -188,6 +234,40 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
     public UserData get(@NotNull final Player player) {
         Objects.requireNonNull(player, "player");
         return get(player.getUniqueId());
+    }
+
+    /**
+     * Loads a user from file without a Player object.
+     */
+    private UserData loadFromFile(UUID uuid) {
+        final File file = new File(folder, uuid + ".json");
+        if (!file.exists()) return null;
+
+        try (Reader reader = new InputStreamReader(new FileInputStream(file))) {
+            final UserData user = JsonUtil.getObjectMapper().readValue(reader, UserData.class);
+            if (user != null) {
+                user.folder = folder;
+                user.defaultRating = defaultRating;
+                user.matchesToDisplay = matchesToDisplay;
+                user.refreshMatches();
+            }
+            return user;
+        } catch (IOException ex) {
+            Log.error(this, "Failed to load offline user: " + uuid, ex);
+            return null;
+        }
+    }
+
+    private TopEntry getTop(final long interval, final TopEntry previous, final Function<UserStatsSummary, Integer> function, final String type, final String identifier) {
+        if (previous == null || System.currentTimeMillis() - previous.getCreation() >= interval) {
+            return new TopEntry(type, identifier, subList(sorted(function)));
+        }
+
+        return null;
+    }
+
+    private List<TopData> subList(final List<TopData> list) {
+        return Collections.unmodifiableList(new ArrayList<>(list.size() > 10 ? list.subList(0, 10) : list));
     }
 
     @Nullable
@@ -217,67 +297,6 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
 
     public String getNextUpdate(final long creation) {
         return DateUtil.format((creation + config.getTopUpdateInterval() - System.currentTimeMillis()) / 1000L);
-    }
-
-    public boolean isOnDuelCooldown(@NotNull final Player player) {
-        Objects.requireNonNull(player, "player");
-        final UserData user = get(player);
-        return user != null && user.isInDuelCooldown();
-    }
-
-    public long getDuelCooldownRemaining(@NotNull final Player player) {
-        Objects.requireNonNull(player, "player");
-        final UserData user = get(player);
-        return user != null ? user.getDuelCooldownRemaining() : 0L;
-    }
-
-    public Player getCooldownPlayer(@NotNull final Collection<Player> players) {
-        Objects.requireNonNull(players, "players");
-        return players.stream().filter(this::isOnDuelCooldown).findFirst().orElse(null);
-    }
-
-    public boolean hasDuelCooldown(@NotNull final Collection<Player> players) {
-        Objects.requireNonNull(players, "players");
-        return getCooldownPlayer(players) != null;
-    }
-
-    public void applyDuelCooldown(@NotNull final Collection<Player> players) {
-        Objects.requireNonNull(players, "players");
-
-        final long cooldown = config.getDuelCooldown();
-
-        if (cooldown <= 0L) {
-            return;
-        }
-
-        final long until = System.currentTimeMillis() + (cooldown * 1000L);
-
-        for (final Player player : players) {
-            final UserData user = get(player);
-
-            if (user != null) {
-                user.setDuelCooldownUntil(until);
-            }
-        }
-    }
-
-    private TopEntry get(final long interval, final TopEntry previous, final Function<User, Integer> function, final String type, final String identifier) {
-        if (previous == null || System.currentTimeMillis() - previous.getCreation() >= interval) {
-            return new TopEntry(type, identifier, subList(sorted(function)));
-        }
-
-        return null;
-    }
-
-    private List<TopData> subList(final List<TopData> list) {
-        return Collections.unmodifiableList(Lists.newArrayList(list.size() > 10 ? list.subList(0, 10) : list));
-    }
-
-    private List<TopData> sorted(final Function<User, Integer> function) {
-        return users.values().stream()
-                .map(data -> new TopData(data.getUuid(), data.getName(), function.apply(data)))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList());
     }
 
     private UserData tryLoad(final Player player) {
@@ -314,12 +333,28 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
 
     private void saveUsers(final Collection<? extends Player> players) {
         for (final Player player : players) {
-            final UserData user = users.remove(player.getUniqueId());
+            final UserData user = onlineUsers.remove(player.getUniqueId());
 
             if (user != null) {
-                user.trySave();
+                user.asyncSave(plugin);
+                updateSummary(user);
             }
         }
+    }
+
+    private void updateSummary(UserData user) {
+        UserStatsSummary summary = statsSummaryMap.get(user.getUuid());
+        if (summary == null) {
+            summary = new UserStatsSummary(user.getUuid(), user.getName(), user.getWins(), user.getLosses(), user.getRatingsMap());
+            statsSummaryMap.put(user.getUuid(), summary);
+        } else {
+            summary.setName(user.getName());
+            summary.setWins(user.getWins());
+            summary.setLosses(user.getLosses());
+            summary.getRatings().clear();
+            summary.getRatings().putAll(user.getRatingsMap());
+        }
+        names.put(user.getName().toLowerCase(), user.getUuid());
     }
 
     @EventHandler
@@ -334,14 +369,14 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
             }
         }, 5L);
 
-        final UserData user = users.get(player.getUniqueId());
+        final UserData user = onlineUsers.get(player.getUniqueId());
 
         if (user != null) {
             if (!player.getName().equals(user.getName())) {
                 user.setName(player.getName());
                 names.put(player.getName().toLowerCase(), player.getUniqueId());
+                updateSummary(user);
             }
-
             return;
         }
 
@@ -354,22 +389,19 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
             }
 
             names.put(player.getName().toLowerCase(), player.getUniqueId());
-            users.put(player.getUniqueId(), data);
+            onlineUsers.put(player.getUniqueId(), data);
+            updateSummary(data);
         });
     }
 
     @EventHandler
     public void on(final PlayerQuitEvent event) {
         final UUID uuid = event.getPlayer().getUniqueId();
-        final UserData user = users.remove(uuid);
+        final UserData user = onlineUsers.remove(uuid);
 
         if (user != null) {
-            plugin.doAsync(() -> {
-                user.trySave();
-
-                // Put data back after saving to prevent concurrency issues
-                users.put(uuid, user);
-            });
+            user.asyncSave(plugin);
+            updateSummary(user);
         }
     }
 
@@ -403,6 +435,10 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
                     winnerData.setRating(kit, winnerRating = winnerRating + change);
                     loserData.setRating(kit, loserRating = loserRating - change);
                 }
+
+                // Update summaries for leaderboards
+                updateSummary(winnerData);
+                updateSummary(loserData);
 
                 message = lang.getMessage("DUEL.on-end.opponent-defeat",
                         "winner", winner.getName(),
@@ -499,6 +535,7 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
                     if (winnerData != null) {
                         final int currentRating = winnerData.getRatingUnsafe(kit);
                         winnerData.setRating(kit, currentRating + change);
+                        updateSummary(winnerData);
                     }
                 }
                 
@@ -507,8 +544,19 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
                     if (loserData != null) {
                         final int currentRating = loserData.getRatingUnsafe(kit);
                         loserData.setRating(kit, currentRating - change);
+                        updateSummary(loserData);
                     }
                 }
+            }
+        } else {
+            // Update summaries even if ratings are disabled
+            for (final Player winner : winners) {
+                final UserData winnerData = get(winner);
+                if (winnerData != null) updateSummary(winnerData);
+            }
+            for (final Player loser : losers) {
+                final UserData loserData = get(loser);
+                if (loserData != null) updateSummary(loserData);
             }
         }
         
@@ -532,6 +580,55 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
 
         applyDuelCooldown(winners);
         applyDuelCooldown(losers);
+    }
+
+    public boolean isOnDuelCooldown(@NotNull final Player player) {
+        Objects.requireNonNull(player, "player");
+        final UserData user = get(player);
+        return user != null && user.isInDuelCooldown();
+    }
+
+    public long getDuelCooldownRemaining(@NotNull final Player player) {
+        Objects.requireNonNull(player, "player");
+        final UserData user = get(player);
+        return user != null ? user.getDuelCooldownRemaining() : 0L;
+    }
+
+    public Player getCooldownPlayer(@NotNull final Collection<Player> players) {
+        Objects.requireNonNull(players, "players");
+        return players.stream().filter(this::isOnDuelCooldown).findFirst().orElse(null);
+    }
+
+    public boolean hasDuelCooldown(@NotNull final Collection<Player> players) {
+        Objects.requireNonNull(players, "players");
+        return getCooldownPlayer(players) != null;
+    }
+
+    public void applyDuelCooldown(@NotNull final Collection<Player> players) {
+        Objects.requireNonNull(players, "players");
+
+        final long cooldown = config.getDuelCooldown();
+
+        if (cooldown <= 0L) {
+            return;
+        }
+
+        final long until = System.currentTimeMillis() + (cooldown * 1000L);
+
+        for (final Player player : players) {
+            final UserData user = get(player);
+
+            if (user != null) {
+                user.setDuelCooldownUntil(until);
+            }
+        }
+    }
+
+    private List<TopData> sorted(final Function<UserStatsSummary, Integer> function) {
+        return statsSummaryMap.values().stream()
+                .map(data -> new TopData(data.getUuid(), data.getName(), function.apply(data)))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toList());
     }
 
 }
