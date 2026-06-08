@@ -124,7 +124,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
     @Getter
     private ValidatorManager validatorManager;
     private CommandsConfig commandsConfig;
-    private static final Logger LOGGER = Logger.getLogger("[Duels-Optimised]");
+    private static final Logger LOGGER = Logger.getLogger("ReDuels");
 
     @Override
     public void onEnable() {
@@ -133,8 +133,6 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         foliaLib = new FoliaLib(this);
         Log.addSource(this);
         JsonUtil.registerDeserializer(ItemData.class, ItemDataDeserializer.class);
-
-        sendBanner();
 
         long start = System.currentTimeMillis();
 
@@ -145,22 +143,18 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         loadPreListeners();
 
         long end = System.currentTimeMillis();
-        sendMessage("&2Successfully enabled Duels in " + CC.getTimeDifferenceAndColor(start, end) + "&a.");
-        checkForUpdatesAndMetrics();
+        sendMessage("&7Enabled in &f" + CC.getTimeDifferenceAndColor(start, end) + "&7.");
+        //checkForUpdatesAndMetrics();
     }
 
     @Override
     public void onDisable() {
         final long start = System.currentTimeMillis();
-        long last = start;
-        logManager.debug("onDisable start -> " + start + "\n");
         unload();
-        logManager.debug("unload done (took " + Math.abs(last - (last = System.currentTimeMillis())) + "ms)");
         Log.clearSources();
-        logManager.debug("Log#clearSources done (took " + Math.abs(last - System.currentTimeMillis()) + "ms)");
         logManager.handleDisable();
         instance = null;
-        sendMessage("&2Disable process took " + (System.currentTimeMillis() - start) + "ms.");
+        sendMessage("&7Shutdown completed in &f" + (System.currentTimeMillis() - start) + "ms&7.");
     }
 
     /**
@@ -598,67 +592,40 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
     }
 
     public static String getPrefix() {
-        return ChatColor.translateAlternateColorCodes('&', "&b&lDuels Optimised &7» ");
+        return ChatColor.translateAlternateColorCodes('&', "&f&lReDuels &7» ");
     }
 
     public static void sendMessage(String message) {
         Bukkit.getConsoleSender().sendMessage(getPrefix() + CC.translate(message));
     }
 
-    private void sendBanner(){
-        String[] banner = {
-                "╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗",
-                "║  ██████╗ ██╗   ██╗███████╗██╗     ███████╗     ██████╗ ██████╗ ████████╗██╗███╗   ███╗██╗███████╗███████╗██████╗  ║",
-                "║  ██╔══██╗██║   ██║██╔════╝██║     ██╔════╝    ██╔═══██╗██╔══██╗╚══██╔══╝██║████╗ ████║██║██╔════╝██╔════╝██╔══██╗ ║",
-                "║  ██║  ██║██║   ██║█████╗  ██║     ███████╗    ██║   ██║██████╔╝   ██║   ██║██╔████╔██║██║███████╗█████╗  ██║  ██║ ║",
-                "║  ██║  ██║██║   ██║██╔══╝  ██║     ╚════██║    ██║   ██║██╔═══╝    ██║   ██║██║╚██╔╝██║██║╚════██║██╔══╝  ██║  ██║ ║",
-                "║  ██████╔╝╚██████╔╝███████╗███████╗███████║    ╚██████╔╝██║        ██║   ██║██║ ╚═╝ ██║██║███████║███████╗██████╔╝ ║",
-                "║  ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝     ╚═════╝ ╚═╝        ╚═╝   ╚═╝╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚═════╝  ║",
-                "╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝"
-        };
-
-        for (String lines : banner){
-            Bukkit.getConsoleSender().sendMessage(CC.translate("&a"+ lines));
-        }
-
-    }
-
     private void loadLogManager(){
         long start = System.currentTimeMillis();
 
-        sendMessage("&eStarting to load log manager");
         try {
             logManager = new LogManager(this);
         } catch (IOException ex) {
-            sendMessage("&c&lCould not load LogManager. Please contact the developer.");
-
-            LOGGER.log(Level.SEVERE, "Could not load LogManager. Please contact the developer.", ex);
-            // Manually print the stacktrace since Log#error only prints errors to non-plugin log sources.
-
+            sendMessage("&cFailed to load LogManager.");
+            LOGGER.log(Level.SEVERE, "Could not load LogManager.", ex);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         Log.addSource(logManager);
-        logManager.debug("onEnable start -> " + System.currentTimeMillis() + "\n");
 
         try {
             Class.forName("org.spigotmc.SpigotConfig");
         } catch (ClassNotFoundException ex) {
-            sendMessage("&c&l================= *** DUELS LOAD FAILURE *** =================");
-            sendMessage("&c&lDuels requires a spigot server to run, but this server was not running on spigot!");
+            sendMessage("&c&l================= *** LOAD FAILURE *** =================");
+            sendMessage("&c&lReDuels requires a spigot server to run!");
             sendMessage("&c&lTo run your server on spigot, follow this guide: " + SPIGOT_INSTALLATION_URL);
-            sendMessage("&c&lSpigot is compatible with CraftBukkit/Bukkit plugins.");
-            sendMessage("&c&l================= *** DUELS LOAD FAILURE *** =================");
+            sendMessage("&c&l================= *** LOAD FAILURE *** =================");
             getServer().getPluginManager().disablePlugin(this);
         }
-
-        sendMessage("&dSuccessfully loaded Log Manager in &f[" + CC.getTimeDifferenceAndColor(start, System.currentTimeMillis()) + "&f]");
     }
 
     private void initLoadables() {
         long start = System.currentTimeMillis();
-        sendMessage("&eStarting to load loadables");
 
         loadAndTrack("config", () -> loadables.add(configuration = new Config(this)));
         loadAndTrack("commands config", () -> loadables.add(commandsConfig = new CommandsConfig(this)));
@@ -683,17 +650,12 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
 
         if (!load()) {
             getServer().getPluginManager().disablePlugin(this);
-            return;
         }
-
-        sendMessage("&dSuccessfully loaded all loadables in &f[" + CC.getTimeDifferenceAndColor(start, System.currentTimeMillis()) + "&f]");
     }
 
     private void loadAndTrack(String name, Runnable task) {
-        long start = System.currentTimeMillis();
         try {
             task.run();
-            sendMessage("&2Successfully loaded " + name + " in &f[" + CC.getTimeDifferenceAndColor(start, System.currentTimeMillis()) + "&f]");
         } catch (Exception e) {
             sendMessage("&cFailed to load " + name + ": " + e.getMessage());
             e.printStackTrace();
@@ -701,13 +663,10 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
     }
 
     private void loadExtensions() {
-        long start = System.currentTimeMillis();
-        sendMessage("&eLoading extensions...");
         try {
             loadables.add(extensionManager = new ExtensionManager(this));
             extensionManager.handleLoad();
             lastLoad = loadables.indexOf(extensionManager);
-            sendMessage("&dSuccessfully loaded extensions in &f[" + CC.getTimeDifferenceAndColor(start, System.currentTimeMillis()) + "&f]");
         } catch (Exception e) {
             sendMessage("&cFailed to load extensions: " + e.getMessage());
             e.printStackTrace();
@@ -715,9 +674,6 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
     }
 
     private void loadPreListeners(){
-        long start = System.currentTimeMillis();
-
-        sendMessage("&eStarting to load pre-listeners");
         new KitItemListener(this);
         new DamageListener(this);
         new ExplosionOwnershipListener(this);
@@ -730,8 +686,6 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         new LingerPotionListener(this);
         new KitEditManager(this);
         registerListener(new KitEditListener(this));
-
-        sendMessage("&dSuccessfully loaded pre-listeners in &f[" + CC.getTimeDifferenceAndColor(start, System.currentTimeMillis()) + "&f]");
     }
 
     private void checkForUpdatesAndMetrics() {
