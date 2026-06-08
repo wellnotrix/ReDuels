@@ -1,0 +1,43 @@
+package dev.veltrix.duels.command.commands.queue.subcommands;
+
+import dev.veltrix.duels.DuelsPlugin;
+import dev.veltrix.duels.Permissions;
+import dev.veltrix.duels.command.BaseCommand;
+import dev.veltrix.duels.core.queue.Queue;
+import dev.veltrix.duels.util.StringUtil;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+import java.util.List;
+
+public class JoinCommand extends BaseCommand {
+
+    public JoinCommand(final DuelsPlugin plugin) {
+        super(plugin, "join", "join [queueName]", "Joins a queue by name.", Permissions.QUEUE, 2, true, "j");
+    }
+
+    @Override
+    protected void execute(final CommandSender sender, final String label, final String[] args) {
+        final Player player = (Player) sender;
+        final String queueName = StringUtil.join(args, " ", 1, args.length);
+
+        final Queue queue = queueManager.getByName(queueName);
+
+        if (queue == null) {
+            lang.sendMessage(sender, "ERROR.queue.not-found", "name", queueName);
+            return;
+        }
+
+        queueManager.queue(player, queue);
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 2) {
+            return queueManager.getQueueNames();
+        }
+
+        return null;
+    }
+}

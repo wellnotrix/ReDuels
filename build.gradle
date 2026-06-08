@@ -9,8 +9,8 @@ buildscript {
 }
 
 allprojects {
-    group = 'com.meteordevelopments'
-    version = '7.1'
+    group = 'dev.veltrix'
+    version = '8.0'
 }
 
 subprojects {
