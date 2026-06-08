@@ -1,11 +1,4 @@
-<h1>Duels</h1>
-
-[![](https://jitpack.io/v/dumbo-the-developer/Duels.svg)](https://jitpack.io/#dumbo-the-developer/Duels)
-
----
-
-* **[Wiki](https://docs.meteordevelopments.com)**
-* **[Support Discord](https://discord.meteordevelopments.com)**
+<h1>ReDuels</h1>
 
 ### Getting the dependency
 
