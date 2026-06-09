@@ -197,7 +197,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         // Unregister all extension listeners that isn't using the method Duels#registerListener
         HandlerList.getRegisteredListeners(this)
                 .stream()
-                .filter(listener -> listener.getListener().getClass().getClassLoader().getClass().isAssignableFrom(ExtensionClassLoader.class))
+                .filter(listener -> ExtensionClassLoader.class.isAssignableFrom(listener.getListener().getClass().getClassLoader().getClass()))
                 .forEach(listener -> HandlerList.unregisterAll(listener.getListener()));
         commands.clear();
 
@@ -478,6 +478,8 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
             return false;
         }
 
+        registerAllCommands();
+        loadPreListeners();
         return true;
     }
 
@@ -665,8 +667,8 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
     private void loadExtensions() {
         try {
             loadables.add(extensionManager = new ExtensionManager(this));
-            extensionManager.handleLoad();
             lastLoad = loadables.indexOf(extensionManager);
+            extensionManager.handleLoad();
         } catch (Exception e) {
             sendMessage("&cFailed to load extensions: " + e.getMessage());
             e.printStackTrace();
