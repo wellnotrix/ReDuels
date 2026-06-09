@@ -1,4 +1,4 @@
-name: Duels
+name: ReDuels
 main: dev.veltrix.duels.DuelsPlugin
 version: @VERSION@
 softdepend: [ AxGraves, BountyHunters, CombatLogX, CombatTagPlus, DeluxeCombat, Essentials, Factions, LeaderHeads, mcMMO, MVdWPlaceholderAPI, MyPet, PlaceholderAPI, NotBounties, PvPManager, SimpleClans, Vault, WorldGuard, Multiverse-Core, My_Worlds, MultiWorld ]
