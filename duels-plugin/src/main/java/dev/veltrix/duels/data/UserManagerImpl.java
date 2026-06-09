@@ -431,7 +431,7 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
                 int change = 0;
 
                 if (config.isRatingEnabled() && !(!match.isFromQueue() && config.isRatingQueueOnly())) {
-                    change = NumberUtil.getChange(config.getKFactor(), winnerRating, loserRating);
+                    change = NumberUtil.getChange(config.getKFactor(), winnerRating, loserRating, winnerData.getMatchesPlayed());
                     winnerData.setRating(kit, winnerRating = winnerRating + change);
                     loserData.setRating(kit, loserRating = loserRating - change);
                 }
@@ -527,7 +527,7 @@ public class UserManagerImpl implements Loadable, Listener, UserManager {
                 winnerTeamRating /= winnerCount;
                 loserTeamRating /= loserCount;
                 
-                final int change = NumberUtil.getChange(config.getKFactor(), winnerTeamRating, loserTeamRating);
+                final int change = NumberUtil.getChange(config.getKFactor(), winnerTeamRating, loserTeamRating, 0);
                 
                 // Apply rating changes to all players
                 for (final Player winner : winners) {

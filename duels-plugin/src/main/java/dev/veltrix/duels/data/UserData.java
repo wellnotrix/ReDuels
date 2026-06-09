@@ -34,6 +34,10 @@ public class UserData implements User {
     @Getter
     private volatile int losses;
     @Getter
+    private volatile int matchesPlayed;
+    @Getter
+    private volatile long lastPlayed;
+    @Getter
     private volatile long duelCooldownUntil;
     private boolean requests = true;
     ConcurrentHashMap<String, Integer> rating;
@@ -186,6 +190,14 @@ public class UserData implements User {
         }
     }
 
+    public void incrementMatchesPlayed() {
+        this.matchesPlayed++;
+        this.lastPlayed = System.currentTimeMillis();
+        if (isOffline()) {
+            asyncSave(dev.veltrix.duels.DuelsPlugin.getInstance());
+        }
+    }
+
     private boolean isOffline() {
         return Bukkit.getPlayer(uuid) == null;
     }
@@ -193,11 +205,13 @@ public class UserData implements User {
     public void addWin() {
         final int wins = this.wins;
         this.wins = wins + 1;
+        incrementMatchesPlayed();
     }
 
     public void addLoss() {
         final int losses = this.losses;
         this.losses = losses + 1;
+        incrementMatchesPlayed();
     }
 
     @Override

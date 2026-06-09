@@ -112,7 +112,7 @@ public class QueueManager implements Loadable, DQueueManager, Listener {
             final int secondRating = second.getRatingUnsafe(kit);
             final int kFactor = config.getKFactor();
             final int maxDifference = config.getMaxDifference();
-            return firstRating - secondRating <= maxDifference && secondRating - firstRating <= maxDifference && NumberUtil.getChange(kFactor, firstRating, secondRating) != 0 && NumberUtil.getChange(kFactor, secondRating, firstRating) != 0;
+            return firstRating - secondRating <= maxDifference && secondRating - firstRating <= maxDifference && NumberUtil.getChange(kFactor, firstRating, secondRating, 0) != 0 && NumberUtil.getChange(kFactor, secondRating, firstRating, 0) != 0;
         }
 
         return false;

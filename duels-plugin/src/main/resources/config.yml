@@ -425,6 +425,10 @@ rating:
   # default: true
   enabled: true
 
+  # Number of days of inactivity before rating decay starts. Set to 0 to disable.
+  # default: 30
+  decay-days: 30
+
   # "The K factor is a measure of how strong a match will impact the players’ ratings."
   # Source: https://metinmediamath.wordpress.com/2013/11/27/how-to-calculate-the-elo-rating-including-example/
   # default: 32

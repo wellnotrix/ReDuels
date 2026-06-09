@@ -155,6 +155,8 @@ public class Config extends AbstractConfiguration<DuelsPlugin> {
     @Getter
     private boolean ratingEnabled;
     @Getter
+    private int ratingDecayDays;
+    @Getter
     private int kFactor;
     @Getter
     private int maxDifference;
@@ -414,6 +416,7 @@ public class Config extends AbstractConfiguration<DuelsPlugin> {
         queueBlacklistedCommands = configuration.getStringList("queue.blacklisted-commands");
 
         ratingEnabled = configuration.getBoolean("rating.enabled", true);
+        ratingDecayDays = configuration.getInt("rating.decay-days", 30);
         kFactor = Math.max(configuration.getInt("rating.k-factor", 32), 1);
         maxDifference = Math.max(configuration.getInt("rating.max-difference", 400), 1);
         defaultRating = Math.max(configuration.getInt("rating.default-rating", 1400), 0);

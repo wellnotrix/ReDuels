@@ -71,10 +71,14 @@ public final class NumberUtil {
         return OptionalInt.of(negative ? result : -result);
     }
 
-    public static int getChange(final int k, final int winnerRating, final int loserRating) {
+    public static int getChange(final int k, final int winnerRating, final int loserRating, final int winnerMatches) {
+        // Smoother K-Factor:
+        // Gradually decrease K as matches increase capping minimum at 16
+        int dynamicK = Math.max(16, k - (winnerMatches / 2));
+        
         final double wr = r(winnerRating);
         final double lr = r(loserRating);
-        return (int) Math.floor(k * (1 - (wr / (wr + lr))));
+        return (int) Math.floor(dynamicK * (1 - (wr / (wr + lr))));
     }
 
     private static double r(final int rating) {
