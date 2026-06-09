@@ -1,5 +1,6 @@
 package dev.veltrix.duels.util;
 
+import dev.veltrix.duels.util.StringUtil;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -30,7 +31,7 @@ public final class TextBuilder {
             }
 
             if (hoverValue != null) {
-                component.setHoverEvent(new HoverEvent(hoverAction, TextComponent.fromLegacyText(hoverValue)));
+                component.setHoverEvent(new HoverEvent(hoverAction, TextComponent.fromLegacyText(StringUtil.color(hoverValue))));
             }
 
             list.add(component);
@@ -75,7 +76,7 @@ public final class TextBuilder {
         }
 
         Arrays.stream(TextComponent.fromLegacyText(text)).forEach(component -> {
-            component.setHoverEvent(new HoverEvent(action, TextComponent.fromLegacyText(value)));
+            component.setHoverEvent(new HoverEvent(action, TextComponent.fromLegacyText(StringUtil.color(value))));
             list.add(component);
         });
         return this;
@@ -95,7 +96,7 @@ public final class TextBuilder {
             }
 
             if (hoverValue != null) {
-                component.setHoverEvent(new HoverEvent(hoverAction, TextComponent.fromLegacyText(hoverValue)));
+                component.setHoverEvent(new HoverEvent(hoverAction, TextComponent.fromLegacyText(StringUtil.color(hoverValue))));
             }
 
             list.add(component);
@@ -117,7 +118,7 @@ public final class TextBuilder {
             return this;
         }
 
-        list.forEach(component -> component.setHoverEvent(new HoverEvent(action, TextComponent.fromLegacyText(value))));
+        list.forEach(component -> component.setHoverEvent(new HoverEvent(action, TextComponent.fromLegacyText(StringUtil.color(value)))));
         return this;
     }
 

@@ -10,7 +10,7 @@ import static io.papermc.lib.PaperLib.teleportAsync;
 public class LobbyCommand extends BaseCommand {
 
     public LobbyCommand(final DuelsPlugin plugin) {
-        super(plugin, "lobby", null, null, 1, true);
+        super(plugin, "lobby", null, null, 0, true);
     }
 
     @Override

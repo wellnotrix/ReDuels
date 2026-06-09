@@ -2,16 +2,21 @@ package dev.veltrix.duels.command.commands.party.subcommands;
 
 import dev.veltrix.duels.Permissions;
 import dev.veltrix.duels.party.PartyMember;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import dev.veltrix.duels.DuelsPlugin;
 import dev.veltrix.duels.command.BaseCommand;
 import dev.veltrix.duels.party.Party;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class KickCommand extends BaseCommand {
     
     public KickCommand(final DuelsPlugin plugin) {
-        super(plugin, "kick", "kick [player]", "Kicks a player from your party.", Permissions.PARTY, 2, true, "remove");
+        super(plugin, "kick", "kick [player]", "Kicks a player from your party.", Permissions.PARTY, 1, true, "remove");
     }
 
     @Override
@@ -29,10 +34,10 @@ public class KickCommand extends BaseCommand {
             return;
         }
         
-        final PartyMember member = party.get(args[1]);
+        final PartyMember member = party.get(args[0]);
 
         if (member == null) {
-            lang.sendMessage(sender, "ERROR.party.not-a-member", "name", args[1]);
+            lang.sendMessage(sender, "ERROR.party.not-a-member", "name", args[0]);
             return;
         }
         
@@ -50,5 +55,18 @@ public class KickCommand extends BaseCommand {
         }
 
         lang.sendMessage(party.getOnlineMembers(), "COMMAND.party.kick.members", "owner", player.getName(), "name", member.getName());
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1 && sender instanceof Player) {
+            final Party party = partyManager.get((Player) sender);
+
+            if (party != null) {
+                return handleTabCompletion(args[0], party.getMembers().stream().map(PartyMember::getName).collect(Collectors.toList()));
+            }
+        }
+
+        return Collections.emptyList();
     }
 }

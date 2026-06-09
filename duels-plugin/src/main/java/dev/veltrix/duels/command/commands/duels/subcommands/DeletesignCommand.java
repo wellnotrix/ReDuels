@@ -16,7 +16,7 @@ import org.bukkit.entity.Player;
 public class DeletesignCommand extends BaseCommand {
 
     public DeletesignCommand(final DuelsPlugin plugin) {
-        super(plugin, "deletesign", null, null, 1, true, "delsign");
+        super(plugin, "deletesign", null, null, 0, true, "delsign");
     }
 
     @Override

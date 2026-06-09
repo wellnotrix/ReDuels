@@ -459,6 +459,8 @@ COMMAND:
       - '{LINE}'
 
   sub-command-usage: '{PREFIX} &f/%command% %usage% &e- &7%description%'
+  next-steps-header: '{PREFIX} &eNext steps:'
+  next-step: ' &6- &f%step%'
 
 
 DUEL:

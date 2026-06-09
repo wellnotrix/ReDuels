@@ -19,7 +19,7 @@ import java.util.List;
 public class AddsignCommand extends BaseCommand {
 
     public AddsignCommand(final DuelsPlugin plugin) {
-        super(plugin, "addsign", "addsign [queueName] [bet] [size] [kit:-]", "Creates a queue sign with given queue name, bet, team size and kit.", 5, true);
+        super(plugin, "addsign", "addsign [queueName] [bet] [size] [kit:-]", "Creates a queue sign with given queue name, bet, team size and kit.", 4, true);
     }
 
     @Override
@@ -32,13 +32,13 @@ public class AddsignCommand extends BaseCommand {
             return;
         }
 
-        final String queueName = args[1];
-        final int bet = NumberUtil.parseInt(args[2]).orElse(0);
-        final int size = Math.max(1, NumberUtil.parseInt(args[3]).orElse(1));
+        final String queueName = args[0];
+        final int bet = NumberUtil.parseInt(args[1]).orElse(0);
+        final int size = Math.max(1, NumberUtil.parseInt(args[2]).orElse(1));
         KitImpl kit = null;
 
-        if (!args[4].equals("-")) {
-            String kitName = StringUtil.join(args, " ", 4, args.length).replace("-", " ");
+        if (!args[3].equals("-")) {
+            String kitName = StringUtil.join(args, " ", 3, args.length).replace("-", " ");
             kit = kitManager.get(kitName);
 
             if (kit == null) {
@@ -71,20 +71,20 @@ public class AddsignCommand extends BaseCommand {
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getQueueNames());
+        }
+
         if (args.length == 2) {
-            return Arrays.asList("Kit_name", "Example_2v2", "Test_3v3", "Any_name_without_spaces");
+            return Arrays.asList("0", "10", "50", "100", "500", "1000");
         }
 
         if (args.length == 3) {
-            return Arrays.asList("0", "10", "50", "100", "500", "1000", "bet_amount");
+            return Arrays.asList("1", "2", "3", "4", "5");
         }
 
-        if (args.length == 4) {
-            return Arrays.asList("1", "2", "3", "4", "5", "upto_infinity_(number_only)");
-        }
-
-        if (args.length > 4) {
-            return handleTabCompletion(args[4], kitManager.getNames(true));
+        if (args.length >= 4) {
+            return handleTabCompletion(args[3], kitManager.getNames(true));
         }
 
         return null;

@@ -15,22 +15,22 @@ import java.util.List;
 public class SetratingCommand extends BaseCommand {
 
     public SetratingCommand(final DuelsPlugin plugin) {
-        super(plugin, "setrating", "setrating [name] [-:kit] [amount]", "Sets player's rating for kit.", 4, false);
+        super(plugin, "setrating", "setrating [name] [-:kit] [amount]", "Sets player's rating for kit.", 3, false);
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
-        final UserData user = userManager.get(args[1]);
+        final UserData user = userManager.get(args[0]);
 
         if (user == null) {
-            lang.sendMessage(sender, "ERROR.data.not-found", "name", args[1]);
+            lang.sendMessage(sender, "ERROR.data.not-found", "name", args[0]);
             return;
         }
 
         KitImpl kit = null;
 
-        if (!args[2].equals("-")) {
-            final String name = StringUtil.join(args, " ", 2, args.length - 1).replace("-", " ");
+        if (!args[1].equals("-")) {
+            final String name = StringUtil.join(args, " ", 1, args.length - 1).replace("-", " ");
             kit = kitManager.get(name);
 
             if (kit == null) {
@@ -47,11 +47,15 @@ public class SetratingCommand extends BaseCommand {
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 3) {
-            return handleTabCompletion(args[2], kitManager.getNames(true));
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getPlayerNames());
+        }
+        
+        if (args.length == 2) {
+            return handleTabCompletion(args[1], kitManager.getNames(true));
         }
 
-        if (args.length > 3) {
+        if (args.length > 2) {
             return Arrays.asList("0", "10", "50", "100", "500", "1000");
         }
 

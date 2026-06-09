@@ -10,7 +10,7 @@ import dev.veltrix.duels.command.BaseCommand;
 public class ToggleCommand extends BaseCommand {
     
     public ToggleCommand(final DuelsPlugin plugin) {
-        super(plugin, "toggle", null, null, Permissions.PARTY_TOGGLE, 1, true);
+        super(plugin, "toggle", null, null, Permissions.PARTY_TOGGLE, 0, true);
     }
 
     @Override

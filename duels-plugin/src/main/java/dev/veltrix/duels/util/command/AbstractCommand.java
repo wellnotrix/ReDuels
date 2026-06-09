@@ -105,13 +105,12 @@ public abstract class AbstractCommand<P extends JavaPlugin> implements TabComple
                 return true;
             }
 
-            if (args.length > 0 && children != null) {
-                final AbstractCommand<P> child = children.get(args[0].toLowerCase());
+            AbstractCommand<P> current = this;
+            int argIndex = 0;
 
-                if (child == null) {
-                    handleMessage(sender, MessageType.SUB_COMMAND_INVALID, label, args[0]);
-                    return true;
-                }
+            while (argIndex < args.length && current.children != null) {
+                final AbstractCommand<P> child = current.children.get(args[argIndex].toLowerCase());
+                if (child == null) break;
 
                 if (child.isPlayerOnly() && !(sender instanceof Player)) {
                     handleMessage(sender, MessageType.PLAYER_ONLY);
@@ -123,50 +122,75 @@ public abstract class AbstractCommand<P extends JavaPlugin> implements TabComple
                     return true;
                 }
 
-                if (args.length < child.length) {
-                    handleMessage(sender, MessageType.SUB_COMMAND_USAGE, label, child.getUsage(), child.getDescription());
+                current = child;
+                argIndex++;
+            }
+
+            final String[] subArgs = argIndex >= args.length ? new String[0] : java.util.Arrays.copyOfRange(args, argIndex, args.length);
+
+            if (current != this) {
+                if (subArgs.length < current.length) {
+                    handleMessage(sender, MessageType.SUB_COMMAND_USAGE, label, current.getUsage(), current.getDescription());
                     return true;
                 }
 
-                child.execute(sender, label, args);
+                current.execute(sender, label, subArgs);
                 return true;
             }
 
-            execute(sender, label, args);
+            if (args.length > 0 && children != null) {
+                final AbstractCommand<P> child = children.get(args[0].toLowerCase());
+
+                if (child == null) {
+                    handleMessage(sender, MessageType.SUB_COMMAND_INVALID, label, args[0]);
+                    return true;
+                }
+
+                // This part is actually redundant now with the while loop above but we keep it for safety hehe
+
+            }
+
+            if (subArgs.length < length && length != -1) {
+                handleMessage(sender, MessageType.SUB_COMMAND_USAGE, label, getUsage(), getDescription());
+                return true;
+            }
+
+            execute(sender, label, subArgs);
             return true;
         });
         pluginCommand.setTabCompleter((sender, command, alias, args) -> {
-            if (children != null && args.length > 1) {
-                final AbstractCommand<P> child = children.get(args[0].toLowerCase());
+            AbstractCommand<P> current = this;
+            int argIndex = 0;
 
-                if (child != null) {
-                    final List<String> result = child.onTabComplete(sender, command, alias, args);
+            while (argIndex < args.length - 1 && current.children != null) {
+                final AbstractCommand<P> child = current.children.get(args[argIndex].toLowerCase());
+                if (child == null) break;
+                current = child;
+                argIndex++;
+            }
 
-                    if (result != null) {
-                        return result;
-                    }
+            final String[] subArgs = argIndex >= args.length ? new String[0] : java.util.Arrays.copyOfRange(args, argIndex, args.length);
+
+            if (current != this || (args.length == 1 && children != null)) {
+                List<String> result = current.onTabComplete(sender, command, alias, subArgs);
+                if (result != null) return result;
+
+                if (current.children != null) {
+                    return current.children.values().stream()
+                            .map(AbstractCommand::getName)
+                            .filter(childName -> childName.toLowerCase().startsWith(args[args.length - 1].toLowerCase()))
+                            .distinct()
+                            .sorted(String::compareTo)
+                            .collect(Collectors.toList());
                 }
             }
 
-            return onTabComplete(sender, command, alias, args);
+            return onTabComplete(sender, command, alias, subArgs);
         });
     }
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 0) {
-            return null;
-        }
-
-        if (args.length == 1 && children != null) {
-            return children.values().stream()
-                    .map(AbstractCommand::getName)
-                    .filter(childName -> childName.startsWith(args[0].toLowerCase()))
-                    .distinct()
-                    .sorted(String::compareTo)
-                    .collect(Collectors.toList());
-        }
-
         return null;
     }
 

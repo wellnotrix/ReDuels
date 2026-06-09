@@ -7,17 +7,20 @@ import dev.veltrix.duels.data.UserData;
 import dev.veltrix.duels.util.DateUtil;
 import dev.veltrix.duels.util.TextBuilder;
 import net.md_5.bungee.api.chat.HoverEvent.Action;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.GregorianCalendar;
+import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class StatsCommand extends BaseCommand {
 
     public StatsCommand(final DuelsPlugin plugin) {
-        super(plugin, "stats", null, null, Permissions.STATS, 1, true);
+        super(plugin, "stats", null, null, Permissions.STATS, 0, true);
     }
 
     @Override
@@ -30,11 +33,20 @@ public class StatsCommand extends BaseCommand {
                 return;
             }
 
-            displayStats(player, args[1]);
+            displayStats(player, args[0]);
             return;
         }
 
         displayStats(player, player.getName());
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getPlayerNames());
+        }
+
+        return Collections.emptyList();
     }
 
     private void displayStats(final Player sender, final String name) {

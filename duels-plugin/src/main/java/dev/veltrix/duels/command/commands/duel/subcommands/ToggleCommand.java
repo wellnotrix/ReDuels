@@ -4,13 +4,17 @@ import dev.veltrix.duels.DuelsPlugin;
 import dev.veltrix.duels.Permissions;
 import dev.veltrix.duels.command.BaseCommand;
 import dev.veltrix.duels.data.UserData;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.Collections;
+import java.util.List;
 
 public class ToggleCommand extends BaseCommand {
 
     public ToggleCommand(final DuelsPlugin plugin) {
-        super(plugin, "toggle", null, null, Permissions.TOGGLE, 1, true);
+        super(plugin, "toggle", null, null, Permissions.TOGGLE, 0, true);
     }
 
     @Override
@@ -24,5 +28,10 @@ public class ToggleCommand extends BaseCommand {
 
         user.setRequests(!user.canRequest());
         lang.sendMessage(sender, "COMMAND.duel.toggle." + (user.canRequest() ? "enabled" : "disabled"));
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        return Collections.emptyList();
     }
 }

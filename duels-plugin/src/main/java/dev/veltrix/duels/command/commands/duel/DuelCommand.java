@@ -21,10 +21,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class DuelCommand extends BaseCommand {
 
@@ -213,10 +210,38 @@ public class DuelCommand extends BaseCommand {
     protected void execute(final CommandSender sender, final String label, final String[] args) {
     }
 
-    // Disables default TabCompleter
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            final List<String> completions = new ArrayList<>(getPlayerNames());
+            completions.addAll(getChildrenNames());
+            return handleTabCompletion(args[0], completions);
+        }
+
+        if (isChild(args[0])) {
+            return null;
+        }
+
+        // /duel <player> [bet] [itemBetting] [kit]
+        if (args.length == 2) {
+            return java.util.Arrays.asList("0", "10", "50", "100", "500", "1000");
+        }
+
+        if (args.length == 3) {
+            return handleTabCompletion(args[2], java.util.Arrays.asList("true", "false"));
+        }
+
+        if (args.length == 4) {
+            final List<String> kits = new ArrayList<>(getKitNames());
+            kits.add("-");
+            return handleTabCompletion(args[3], kits);
+        }
+
         return null;
+    }
+
+    private List<String> getChildrenNames() {
+        return java.util.Arrays.asList("accept", "deny", "stats", "toggle", "top", "inventory", "version");
     }
     private boolean containsPlaceholder(String[] args) {
         for (String arg : args) {

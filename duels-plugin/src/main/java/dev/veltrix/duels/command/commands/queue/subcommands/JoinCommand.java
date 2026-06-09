@@ -14,13 +14,13 @@ import java.util.List;
 public class JoinCommand extends BaseCommand {
 
     public JoinCommand(final DuelsPlugin plugin) {
-        super(plugin, "join", "join [queueName]", "Joins a queue by name.", Permissions.QUEUE, 2, true, "j");
+        super(plugin, "join", "join [queueName]", "Joins a queue by name.", Permissions.QUEUE, 1, true, "j");
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
         final Player player = (Player) sender;
-        final String queueName = StringUtil.join(args, " ", 1, args.length);
+        final String queueName = StringUtil.join(args, " ", 0, args.length);
 
         final Queue queue = queueManager.getByName(queueName);
 
@@ -34,8 +34,8 @@ public class JoinCommand extends BaseCommand {
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 2) {
-            return queueManager.getQueueNames();
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getQueueNames());
         }
 
         return null;

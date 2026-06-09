@@ -7,24 +7,26 @@ import dev.veltrix.duels.core.request.RequestImpl;
 import dev.veltrix.duels.util.function.Pair;
 import dev.veltrix.duels.util.validator.ValidatorUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Collections;
+import java.util.List;
 
 public class DenyCommand extends BaseCommand {
 
     public DenyCommand(final DuelsPlugin plugin) {
-        super(plugin, "deny", "deny [player]", "Declines a duel request.", 2, true);
+        super(plugin, "deny", "deny [player]", "Declines a duel request.", 1, true);
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
         final Player player = (Player) sender;
-        final Player target = Bukkit.getPlayerExact(args[1]);
+        final Player target = Bukkit.getPlayerExact(args[0]);
 
         if (target == null || !player.canSee(target)) {
-            lang.sendMessage(sender, "ERROR.player.not-found", "name", args[1]);
+            lang.sendMessage(sender, "ERROR.player.not-found", "name", args[0]);
             return;
         }
 
@@ -45,5 +47,14 @@ public class DenyCommand extends BaseCommand {
             lang.sendMessage(player, "COMMAND.duel.request.deny.receiver", "name", target.getName());
             lang.sendMessage(target, "COMMAND.duel.request.deny.sender", "name", player.getName());
         }
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getPlayerNames());
+        }
+
+        return Collections.emptyList();
     }
 }

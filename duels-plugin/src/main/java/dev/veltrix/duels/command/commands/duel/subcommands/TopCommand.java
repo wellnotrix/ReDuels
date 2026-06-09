@@ -7,14 +7,17 @@ import dev.veltrix.duels.api.user.UserManager.TopEntry;
 import dev.veltrix.duels.command.BaseCommand;
 import dev.veltrix.duels.core.kit.KitImpl;
 import dev.veltrix.duels.util.StringUtil;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class TopCommand extends BaseCommand {
 
     public TopCommand(final DuelsPlugin plugin) {
-        super(plugin, "top", "top [-:kit:wins:losses]", "Displays top wins, losses, or rating for kit.", Permissions.TOP, 2, true);
+        super(plugin, "top", "top [-:kit:wins:losses]", "Displays top wins, losses, or rating for kit.", Permissions.TOP, 1, true);
     }
 
     @Override
@@ -26,14 +29,14 @@ public class TopCommand extends BaseCommand {
 
         final TopEntry topEntry;
 
-        if (args[1].equals("-")) {
+        if (args[0].equals("-")) {
             topEntry = userManager.getTopRatings();
-        } else if (args[1].equalsIgnoreCase("wins")) {
+        } else if (args[0].equalsIgnoreCase("wins")) {
             topEntry = userManager.getWins();
-        } else if (args[1].equalsIgnoreCase("losses")) {
+        } else if (args[0].equalsIgnoreCase("losses")) {
             topEntry = userManager.getLosses();
         } else {
-            final String name = StringUtil.join(args, " ", 1, args.length);
+            final String name = StringUtil.join(args, " ", 0, args.length);
             final KitImpl kit = kitManager.get(name);
 
             if (kit == null) {
@@ -61,5 +64,19 @@ public class TopCommand extends BaseCommand {
         }
 
         lang.sendMessage(sender, "COMMAND.duel.top.footer", "type", topEntry.getType());
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            final List<String> completions = new ArrayList<>();
+            completions.add("-");
+            completions.add("wins");
+            completions.add("losses");
+            completions.addAll(getKitNames());
+            return handleTabCompletion(args[0], completions);
+        }
+
+        return Collections.emptyList();
     }
 }

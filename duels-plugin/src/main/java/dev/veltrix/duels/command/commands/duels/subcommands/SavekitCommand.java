@@ -11,13 +11,13 @@ import java.util.Arrays;
 public class SavekitCommand extends BaseCommand {
 
     public SavekitCommand(final DuelsPlugin plugin) {
-        super(plugin, "savekit", "savekit [name]", "Saves a kit with given name.", 2, true);
+        super(plugin, "savekit", "savekit [name]", "Saves a kit with given name.", 1, true);
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
         final String[] argsNoOptions = Arrays.stream(args).filter(s -> !s.startsWith("-")).toArray(String[]::new);
-        final String name = StringUtil.join(argsNoOptions, " ", 1, argsNoOptions.length);
+        final String name = StringUtil.join(argsNoOptions, " ", 0, argsNoOptions.length);
 
         if (!StringUtil.isAlphanumeric(name)) {
             lang.sendMessage(sender, "ERROR.command.name-not-alphanumeric", "name", name);
@@ -30,5 +30,6 @@ public class SavekitCommand extends BaseCommand {
         }
 
         lang.sendMessage(sender, "COMMAND.duels.save-kit", "name", name);
+        suggestNext(sender, "/duels options " + name, "/duels setitem " + name);
     }
 }

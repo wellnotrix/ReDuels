@@ -1,5 +1,6 @@
 package dev.veltrix.duels.command.commands.party;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import dev.veltrix.duels.DuelsPlugin;
@@ -104,10 +105,19 @@ public class PartyCommand extends BaseCommand {
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {}
 
-    // Disables default TabCompleter
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            final List<String> completions = new ArrayList<>(getPlayerNames());
+            completions.addAll(getChildrenNames());
+            return handleTabCompletion(args[0], completions);
+        }
+
         return null;
+    }
+
+    private List<String> getChildrenNames() {
+        return java.util.Arrays.asList("toggle", "accept", "list", "leave", "kick", "friendlyfire", "transfer", "disband");
     }
 
     private boolean containsPlaceholder(String[] args) {

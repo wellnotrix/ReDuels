@@ -100,15 +100,65 @@ public abstract class BaseCommand extends AbstractCommand<DuelsPlugin> {
                 lang.sendMessage(sender, "ERROR.command.invalid-sub-command", "command", args[0], "argument", args[1]);
                 break;
             case SUB_COMMAND_USAGE:
-                lang.sendMessage(sender, "COMMAND.sub-command-usage", "command", args[0], "usage", args[1], "description", args[2]);
+                if (sender instanceof org.bukkit.entity.Player) {
+                    final String rawUsage = lang.getMessage("COMMAND.sub-command-usage", "command", args[0], "usage", args[1], "description", args[2]);
+                    final String command = "/" + args[0] + " " + args[1].split(" \\[")[0].split(" <")[0];
+                    dev.veltrix.duels.util.TextBuilder.of(dev.veltrix.duels.util.StringUtil.color(rawUsage))
+                            .setClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.SUGGEST_COMMAND, command)
+                            .setHoverEvent(net.md_5.bungee.api.chat.HoverEvent.Action.SHOW_TEXT, dev.veltrix.duels.util.StringUtil.color("&7Click to suggest command:\n&f" + command))
+                            .send((org.bukkit.entity.Player) sender);
+                } else {
+                    lang.sendMessage(sender, "COMMAND.sub-command-usage", "command", args[0], "usage", args[1], "description", args[2]);
+                }
                 break;
         }
     }
 
     protected List<String> handleTabCompletion(final String argument, final Collection<String> collection) {
+        if (argument == null || collection == null) return java.util.Collections.emptyList();
+        
+        final String lowerArg = argument.toLowerCase();
         return collection.stream()
-                .filter(value -> value.toLowerCase().startsWith(argument.toLowerCase()))
+                .filter(value -> value != null && value.toLowerCase().startsWith(lowerArg))
                 .map(value -> value.replace(" ", "-"))
+                .sorted()
                 .collect(Collectors.toList());
+    }
+
+    protected void suggestNext(final CommandSender sender, final String... steps) {
+        if (steps == null || steps.length == 0) return;
+        
+        lang.sendMessage(sender, "COMMAND.next-steps-header");
+        if (sender instanceof org.bukkit.entity.Player) {
+            final org.bukkit.entity.Player player = (org.bukkit.entity.Player) sender;
+            for (final String step : steps) {
+                dev.veltrix.duels.util.TextBuilder.of(lang.getMessage("COMMAND.next-step", "step", step))
+                        .setClickEvent(net.md_5.bungee.api.chat.ClickEvent.Action.SUGGEST_COMMAND, step)
+                        .setHoverEvent(net.md_5.bungee.api.chat.HoverEvent.Action.SHOW_TEXT, "&7Click to suggest command:\n&f" + step)
+                        .send(player);
+            }
+        } else {
+            for (final String step : steps) {
+                lang.sendMessage(sender, "COMMAND.next-step", "step", step);
+            }
+        }
+    }
+
+    protected List<String> getPlayerNames() {
+        return org.bukkit.Bukkit.getOnlinePlayers().stream()
+                .map(org.bukkit.entity.Player::getName)
+                .collect(Collectors.toList());
+    }
+
+    protected List<String> getArenaNames() {
+        return arenaManager.getNames();
+    }
+
+    protected List<String> getKitNames() {
+        return kitManager.getNames(false);
+    }
+
+    protected List<String> getQueueNames() {
+        return queueManager.getQueueNames();
     }
 }

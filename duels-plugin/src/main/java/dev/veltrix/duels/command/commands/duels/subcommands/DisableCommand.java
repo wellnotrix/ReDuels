@@ -13,12 +13,12 @@ public class DisableCommand extends BaseCommand {
 
 
     public DisableCommand(final DuelsPlugin plugin) {
-        super(plugin, "disable", "disable [name]", "Disables an arena.", 2, false);
+        super(plugin, "disable", "disable [name]", "Disables an arena.", 1, false);
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
-        final String name = StringUtil.join(args, " ", 1, args.length).replace("-", " ");
+        final String name = StringUtil.join(args, " ", 0, args.length).replace("-", " ");
         final ArenaImpl arena = arenaManager.get(name);
 
         if (arena == null) {
@@ -35,9 +35,10 @@ public class DisableCommand extends BaseCommand {
         lang.sendMessage(sender, "COMMAND.duels.disable", "name", name);
     }
 
+    @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 2) {
-            return handleTabCompletion(args[1], arenaManager.getNames());
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getArenaNames());
         }
 
         return null;

@@ -182,6 +182,7 @@ public class QueueSignManagerImpl implements Loadable, QueueSignManager, Listene
                     .filter(queueSign -> queueSign.equals(sign))
                     .forEach(QueueSignImpl::update);
         }
+        event.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

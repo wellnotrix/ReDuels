@@ -16,13 +16,13 @@ import java.util.stream.Collectors;
 public class ReloadCommand extends BaseCommand {
 
     public ReloadCommand(final DuelsPlugin plugin) {
-        super(plugin, "reload", null, null, 1, false, "rl");
+        super(plugin, "reload", null, null, 0, false, "rl");
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
-        if (args.length > getLength()) {
-            final Loadable target = plugin.find(args[1]);
+        if (args.length > 0) {
+            final Loadable target = plugin.find(args[0]);
 
             if (!(target instanceof Reloadable)) {
                 sender.sendMessage(ChatColor.RED + "Invalid module. The following modules are available for a reload: " + StringUtil.join(plugin.getReloadables(), ", "));
@@ -49,10 +49,8 @@ public class ReloadCommand extends BaseCommand {
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 2) {
-            return plugin.getReloadables().stream()
-                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
-                    .collect(Collectors.toList());
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], plugin.getReloadables());
         }
 
         return null;

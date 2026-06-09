@@ -166,6 +166,8 @@ public class ArenaManagerImpl implements Loadable, ArenaManager {
 
         ArenaImpl arena = new ArenaImpl(plugin, name);
         arenas.add(arena);
+        arenasByName.put(name, arena);
+
         saveArenas();
         Bukkit.getPluginManager().callEvent(new ArenaCreateEvent(source, arena));
         gui.calculatePages();
@@ -174,6 +176,7 @@ public class ArenaManagerImpl implements Loadable, ArenaManager {
 
     public boolean remove(final CommandSender source, final ArenaImpl arena) {
         if (arenas.remove(arena)) {
+            arenasByName.remove(arena.getName());
             arena.setRemoved(true);
             saveArenas();
             Bukkit.getPluginManager().callEvent(new ArenaRemoveEvent(source, arena));

@@ -16,7 +16,7 @@ import java.util.List;
 public class SetarenaitemCommand extends BaseCommand {
 
     public SetarenaitemCommand(final DuelsPlugin plugin) {
-        super(plugin, "setarenaitem", "setarenaitem [name]", "Sets the displayed item for selected arena.", 2, true);
+        super(plugin, "setarenaitem", "setarenaitem [name]", "Sets the displayed item for selected arena.", 1, true);
     }
 
     @Override
@@ -29,7 +29,7 @@ public class SetarenaitemCommand extends BaseCommand {
             return;
         }
 
-        final String name = StringUtil.join(args, " ", 1, args.length).replace("-", " ");
+        final String name = StringUtil.join(args, " ", 0, args.length).replace("-", " ");
         final ArenaImpl arena = arenaManager.get(name);
 
         if (arena == null) {
@@ -44,8 +44,8 @@ public class SetarenaitemCommand extends BaseCommand {
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 2) {
-            return handleTabCompletion(args[1], arenaManager.getNames());
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getArenaNames());
         }
 
         return null;

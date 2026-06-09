@@ -12,17 +12,19 @@ import dev.veltrix.duels.util.function.Pair;
 
 import dev.veltrix.duels.util.validator.ValidatorUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 public class AcceptCommand extends BaseCommand {
     private final WorldGuardHook worldGuard;
 
     public AcceptCommand(final DuelsPlugin plugin) {
-        super(plugin, "accept", "accept [player]", "Accepts a duel request.", 2, true);
+        super(plugin, "accept", "accept [player]", "Accepts a duel request.", 1, true);
         this.worldGuard = hookManager.getHook(WorldGuardHook.class);
     }
 
@@ -37,10 +39,10 @@ public class AcceptCommand extends BaseCommand {
             return;
         }
 
-        final Player target = Bukkit.getPlayerExact(args[1]);
+        final Player target = Bukkit.getPlayerExact(args[0]);
 
         if (target == null || !player.canSee(target)) {
-            lang.sendMessage(sender, "ERROR.player.not-found", "name", args[1]);
+            lang.sendMessage(sender, "ERROR.player.not-found", "name", args[0]);
             return;
         }
 
@@ -106,5 +108,14 @@ public class AcceptCommand extends BaseCommand {
         } else {
             duelManager.startMatch(target, player, settings, null, null);
         }
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getPlayerNames());
+        }
+
+        return Collections.emptyList();
     }
 }

@@ -13,12 +13,12 @@ import java.util.List;
 public class LoadkitCommand extends BaseCommand {
 
     public LoadkitCommand(final DuelsPlugin plugin) {
-        super(plugin, "loadkit", "loadkit [name]", "Loads the selected kit to your inventory.", 2, true);
+        super(plugin, "loadkit", "loadkit [name]", "Loads the selected kit to your inventory.", 1, true);
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
-        final String name = StringUtil.join(args, " ", 1, args.length).replace("-", " ");
+        final String name = StringUtil.join(args, " ", 0, args.length).replace("-", " ");
         final KitImpl kit = kitManager.get(name);
 
         if (kit == null) {
@@ -34,8 +34,8 @@ public class LoadkitCommand extends BaseCommand {
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 2) {
-            return handleTabCompletion(args[1], kitManager.getNames(false));
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getKitNames());
         }
 
         return null;

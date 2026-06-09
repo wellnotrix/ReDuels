@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 public class SetKitLobbyCommand extends BaseCommand {
 
     public SetKitLobbyCommand(final DuelsPlugin plugin) {
-        super(plugin, "setkitlobby", null, null, 1, true);
+        super(plugin, "setkitlobby", null, null, 0, true);
     }
 
     @Override

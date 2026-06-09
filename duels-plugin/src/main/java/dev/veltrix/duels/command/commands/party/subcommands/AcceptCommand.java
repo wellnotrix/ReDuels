@@ -6,13 +6,17 @@ import dev.veltrix.duels.command.BaseCommand;
 import dev.veltrix.duels.party.Party;
 import dev.veltrix.duels.party.PartyInvite;
 import org.bukkit.Bukkit;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import java.util.Collections;
+import java.util.List;
 
 public class AcceptCommand extends BaseCommand {
     
     public AcceptCommand(final DuelsPlugin plugin) {
-        super(plugin, "accept", "accept [player]", "Accepts a party invitation.", Permissions.PARTY, 2, true, "a");
+        super(plugin, "accept", "accept [player]", "Accepts a party invitation.", Permissions.PARTY, 1, true, "a");
     }
 
     @Override
@@ -24,10 +28,10 @@ public class AcceptCommand extends BaseCommand {
             return;
         }
 
-        final Player target = Bukkit.getPlayerExact(args[1]);
+        final Player target = Bukkit.getPlayerExact(args[0]);
 
         if (target == null || !player.canSee(target)) {
-            lang.sendMessage(sender, "ERROR.player.not-found", "name", args[1]);
+            lang.sendMessage(sender, "ERROR.player.not-found", "name", args[0]);
             return;
         }
 
@@ -53,5 +57,14 @@ public class AcceptCommand extends BaseCommand {
         lang.sendMessage(player, "COMMAND.party.invite.accept.receiver", "name", target.getName());
         lang.sendMessage(party.getOnlineMembers(), "COMMAND.party.invite.accept.members", "name", player.getName());
         partyManager.join(player, party);
+    }
+
+    @Override
+    public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+        if (args.length == 1) {
+            return handleTabCompletion(args[0], getPlayerNames());
+        }
+
+        return Collections.emptyList();
     }
 }

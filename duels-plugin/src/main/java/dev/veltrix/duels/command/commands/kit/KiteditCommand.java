@@ -20,7 +20,7 @@ import java.util.List;
 public class KiteditCommand extends BaseCommand {
     
     public KiteditCommand(DuelsPlugin plugin) {
-        super(plugin, "kitedit", "kitedit [kitname]", "Starts kit editing mode for the specified kit.", 1, true);
+        super(plugin, "kitedit", "kitedit [kitname]", "Starts kit editing mode for the specified kit.", 0, true);
     }
     
     public void executeCommand(CommandSender sender, String[] args) {
@@ -32,12 +32,12 @@ public class KiteditCommand extends BaseCommand {
         Player player = (Player) sender;
         
         // If no kit argument provided or only "cancel" without being in edit mode, open GUI
-        if (args.length < 2) {
+        if (args.length < 1) {
             openKitEditGui(player);
             return;
         }
 
-        String kitName = args[1];
+        String kitName = args[0];
 
         // Handle cancel subcommand: /kit edit cancel
         if (kitName.equalsIgnoreCase("cancel")) {
@@ -121,73 +121,15 @@ public class KiteditCommand extends BaseCommand {
     
     @Override
     protected void execute(CommandSender sender, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            lang.sendMessage(sender, "ERROR.player-only");
-            return;
-        }
-        
-        Player player = (Player) sender;
-        
-        // If no kit argument provided or only "cancel" without being in edit mode, open GUI
-        if (args.length < 2) {
-            openKitEditGui(player);
-            return;
-        }
-
-        String kitName = args[1];
-
-        // Handle cancel subcommand: /kit edit cancel
-        if (kitName.equalsIgnoreCase("cancel")) {
-            if (!KitEditManager.getInstance().isEditing(player)) {
-                // Not editing, open GUI instead
-                openKitEditGui(player);
-                return;
-            }
-
-            KitEditManager.getInstance().abortEditSession(player);
-            lang.sendMessage(player, "KIT.EDIT.cancelled");
-            return;
-        }
-        
-        // Check if player is already editing
-        if (KitEditManager.getInstance().isEditing(player)) {
-            lang.sendMessage(player, "KIT.EDIT.already-editing");
-            return;
-        }
-        
-        // Check if player is in a queue
-        if (queueManager.get(player) != null) {
-            lang.sendMessage(player, "KIT.EDIT.in-queue");
-            return;
-        }
-        
-        // Check if player is in a match
-        if (arenaManager.isInMatch(player)) {
-            lang.sendMessage(player, "KIT.EDIT.in-match");
-            return;
-        }
-        
-        // Check if kit exists
-        KitImpl kit = kitManager.get(kitName);
-        if (kit == null) {
-            lang.sendMessage(player, "ERROR.kit.not-found", "name", kitName);
-            return;
-        }
-        
-        // Start editing session
-        if (KitEditManager.getInstance().startEditSession(player, kitName)) {
-            lang.sendMessage(player, "KIT.EDIT.started", "kit", kitName);
-        } else {
-            lang.sendMessage(player, "KIT.EDIT.start-failed", "kit", kitName);
-        }
+        executeCommand(sender, args);
     }
     
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 2) {
-            List<String> completions = new ArrayList<>(kitManager.getNames(false));
+        if (args.length == 1) {
+            List<String> completions = new ArrayList<>(getKitNames());
             completions.add("cancel");
-            return completions;
+            return handleTabCompletion(args[0], completions);
         }
         return null;
     }

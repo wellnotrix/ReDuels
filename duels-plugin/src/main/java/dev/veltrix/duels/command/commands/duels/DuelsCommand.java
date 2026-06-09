@@ -15,35 +15,15 @@ public class DuelsCommand extends BaseCommand {
         super(plugin, Objects.requireNonNull(settings, "settings").getName(), Permissions.ADMIN, false, settings.getAliasArray());
         child(
                 new HelpCommand(plugin),
-                new SavekitCommand(plugin),
-                new DeletekitCommand(plugin),
-                new LoadkitCommand(plugin),
-                new SetitemCommand(plugin),
-                new SetarenaitemCommand(plugin),
-                new OptionsCommand(plugin),
-                new BindCommand(plugin),
-                new CreateCommand(plugin),
-                new DeleteCommand(plugin),
-                new SetCommand(plugin),
-                new ToggleCommand(plugin),
-                new TeleportCommand(plugin),
-                new CreatequeueCommand(plugin),
-                new DeletequeueCommand(plugin),
-                new AddsignCommand(plugin),
-                new DeletesignCommand(plugin),
-                new SetlobbyCommand(plugin),
-                new SetKitLobbyCommand(plugin),
-                new LobbyCommand(plugin),
                 new InfoCommand(plugin),
                 new ListCommand(plugin),
-                new EditCommand(plugin),
-                new SetratingCommand(plugin),
-                new ResetCommand(plugin),
-                new ResetratingCommand(plugin),
-                new PlaysoundCommand(plugin),
-                new ReloadCommand(plugin),
-                new DisableCommand(plugin),
-                new EnableCommand(plugin)
+                new ArenaCommand(plugin),
+                new KitAdminCommand(plugin),
+                new QueueAdminCommand(plugin),
+                new SignCommand(plugin),
+                new UserAdminCommand(plugin),
+                new SystemCommand(plugin),
+                new ReloadCommand(plugin) // Keep reload at top level too
         );
     }
 

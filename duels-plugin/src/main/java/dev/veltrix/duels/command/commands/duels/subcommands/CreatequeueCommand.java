@@ -14,18 +14,18 @@ import java.util.List;
 public class CreatequeueCommand extends BaseCommand {
 
     public CreatequeueCommand(final DuelsPlugin plugin) {
-        super(plugin, "createqueue", "createqueue [name] [bet] [size] [-:kit]", "Creates a queue with given name, bet, team size and kit.", 5, false, "createq");
+        super(plugin, "createqueue", "createqueue [name] [bet] [size] [-:kit]", "Creates a queue with given name, bet, team size and kit.", 4, false, "createq");
     }
 
     @Override
     protected void execute(final CommandSender sender, final String label, final String[] args) {
-        final String queueName = args[1];
-        final int bet = NumberUtil.parseInt(args[2]).orElse(0);
-        final int size = Math.max(1, NumberUtil.parseInt(args[3]).orElse(1));
+        final String queueName = args[0];
+        final int bet = NumberUtil.parseInt(args[1]).orElse(0);
+        final int size = Math.max(1, NumberUtil.parseInt(args[2]).orElse(1));
         KitImpl kit = null;
 
-        if (!args[4].equals("-")) {
-            String kitName = StringUtil.join(args, " ", 4, args.length).replace("-", " ");
+        if (!args[3].equals("-")) {
+            String kitName = StringUtil.join(args, " ", 3, args.length).replace("-", " ");
             kit = kitManager.get(kitName);
 
             if (kit == null) {
@@ -42,24 +42,25 @@ public class CreatequeueCommand extends BaseCommand {
         }
 
         lang.sendMessage(sender, "COMMAND.duels.create-queue", "name", queueName, "kit", kitName, "bet_amount", bet);
+        suggestNext(sender, "/duels queue list", "/duels queue info " + queueName);
     }
 
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if (args.length == 2) {
+        if (args.length == 1) {
             return Arrays.asList("Name", "Example", "Example_2", "ANY_NAME");
         }
 
+        if (args.length == 2) {
+            return Arrays.asList("0", "10", "50", "100", "500", "1000");
+        }
+
         if (args.length == 3) {
-            return Arrays.asList("0", "10", "50", "100", "500", "1000", "bet_amount");
+            return Arrays.asList("1", "2", "3", "4", "5");
         }
 
-        if (args.length == 4) {
-            return Arrays.asList("1", "2", "3", "4", "5", "any_size");
-        }
-
-        if (args.length > 4) {
-            return handleTabCompletion(args[4], kitManager.getNames(true));
+        if (args.length >= 4) {
+            return handleTabCompletion(args[3], kitManager.getNames(true));
         }
 
         return null;
