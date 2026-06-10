@@ -48,7 +48,7 @@ public class PlayerInfoManager implements Loadable {
 
     private static final String ERROR_LOBBY_LOAD = "Could not load lobby location!";
     private static final String ERROR_LOBBY_SAVE = "Could not save lobby location!";
-    private static final String ERROR_LOBBY_DEFAULT = "Lobby location was not set, using %s's spawn location as default. Use the command /duels setlobby in-game to set the lobby location.";
+    private static final String WARNING_LOBBY_NOT_SET = "Lobby locations are not set. Use /duels system setlobby and /duels system setkitlobby to set them.";
 
     private final DuelsPlugin plugin;
     private final Config config;
@@ -62,10 +62,10 @@ public class PlayerInfoManager implements Loadable {
     private EssentialsHook essentials;
     private ArenaManagerImpl arenaManager;
 
-    @Getter
     private Location lobby;
-    @Getter
     private Location kitLobby;
+    private LocationData pendingLobby;
+    private LocationData pendingKitLobby;
 
     public PlayerInfoManager(final DuelsPlugin plugin) {
         this.plugin = plugin;
@@ -98,7 +98,8 @@ public class PlayerInfoManager implements Loadable {
 
         if (FileUtil.checkNonEmpty(lobbyFile, false)) {
             try (final Reader reader = new InputStreamReader(Files.newInputStream(lobbyFile.toPath()), Charsets.UTF_8)) {
-                this.lobby = JsonUtil.getObjectMapper().readValue(reader, LocationData.class).toLocation();
+                this.pendingLobby = JsonUtil.getObjectMapper().readValue(reader, LocationData.class);
+                this.lobby = pendingLobby.toLocation();
             } catch (IOException ex) {
                 Log.error(this, ERROR_LOBBY_LOAD, ex);
             }
@@ -106,24 +107,38 @@ public class PlayerInfoManager implements Loadable {
 
         if (FileUtil.checkNonEmpty(kitlobbyFile, false)) {
             try (final Reader reader = new InputStreamReader(Files.newInputStream(kitlobbyFile.toPath()), Charsets.UTF_8)) {
-                this.kitLobby = JsonUtil.getObjectMapper().readValue(reader, LocationData.class).toLocation();
+                this.pendingKitLobby = JsonUtil.getObjectMapper().readValue(reader, LocationData.class);
+                this.kitLobby = pendingKitLobby.toLocation();
             } catch (IOException ex) {
                 Log.error(this, ERROR_LOBBY_LOAD, ex);
             }
         }
 
-        // If lobby is not found or invalid, use the default world's spawn location for lobby.
+        if (lobby == null && kitLobby == null) {
+            Log.warn(this, WARNING_LOBBY_NOT_SET);
+        }
+    }
+
+    public Location getLobby() {
+        if (lobby == null && pendingLobby != null) {
+            lobby = pendingLobby.toLocation();
+        }
+        
         if (lobby == null || lobby.getWorld() == null) {
-            final World world = Bukkit.getWorlds().getFirst();
-            this.lobby = world.getSpawnLocation();
-            Log.warn(this, String.format(ERROR_LOBBY_DEFAULT, world.getName()));
+            return Bukkit.getWorlds().getFirst().getSpawnLocation();
+        }
+        return lobby;
+    }
+
+    public Location getKitLobby() {
+        if (kitLobby == null && pendingKitLobby != null) {
+            kitLobby = pendingKitLobby.toLocation();
         }
 
         if (kitLobby == null || kitLobby.getWorld() == null) {
-            final World world = Bukkit.getWorlds().getFirst();
-            this.kitLobby = world.getSpawnLocation();
-            Log.warn(this, String.format(ERROR_LOBBY_DEFAULT, world.getName()));
+            return Bukkit.getWorlds().getFirst().getSpawnLocation();
         }
+        return kitLobby;
     }
 
     @Override
@@ -170,6 +185,8 @@ public class PlayerInfoManager implements Loadable {
             JsonUtil.getObjectWriter().writeValue(writer, LocationData.fromLocation(lobby));
             writer.flush();
             this.lobby = lobby;
+            this.pendingLobby = LocationData.fromLocation(lobby);
+            Log.info(this, "Lobby location set by " + player.getName() + " at " + lobby.getWorld().getName() + ", " + lobby.getBlockX() + ", " + lobby.getBlockY() + ", " + lobby.getBlockZ());
             return true;
         } catch (IOException ex) {
             Log.error(this, ERROR_LOBBY_SAVE, ex);
@@ -184,6 +201,8 @@ public class PlayerInfoManager implements Loadable {
             JsonUtil.getObjectWriter().writeValue(writer, LocationData.fromLocation(lobby));
             writer.flush();
             this.kitLobby = lobby;
+            this.pendingKitLobby = LocationData.fromLocation(lobby);
+            Log.info(this, "Kit lobby location set by " + player.getName() + " at " + lobby.getWorld().getName() + ", " + lobby.getBlockX() + ", " + lobby.getBlockY() + ", " + lobby.getBlockZ());
             return true;
         } catch (IOException ex) {
             Log.error(this, ERROR_LOBBY_SAVE, ex);

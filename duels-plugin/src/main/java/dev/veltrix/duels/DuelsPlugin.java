@@ -128,7 +128,6 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
 
     @Override
     public void onEnable() {
-
         instance = this;
         foliaLib = new FoliaLib(this);
         Log.addSource(this);
@@ -143,7 +142,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         loadPreListeners();
 
         long end = System.currentTimeMillis();
-        sendMessage("&7Enabled in &f" + CC.getTimeDifferenceAndColor(start, end) + "&7.");
+        Log.info("Enabled successfully! (took " + (end - start) + "ms)");
         //checkForUpdatesAndMetrics();
     }
 
@@ -154,7 +153,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         Log.clearSources();
         logManager.handleDisable();
         instance = null;
-        sendMessage("&7Shutdown completed in &f" + (System.currentTimeMillis() - start) + "ms&7.");
+        Log.info("Shutdown completed in " + (System.currentTimeMillis() - start) + "ms.");
     }
 
     /**
@@ -179,7 +178,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
                     LOGGER.log(Level.SEVERE, "Error loading ", ex);
                 }
 
-                sendMessage("&c&lThere was an error while loading " + name + "! If you believe this is an issue from the plugin, please contact the developer.");
+                Log.error("There was an error while loading " + name + "! If you believe this is an issue from the plugin, please contact the developer.");
                 return false;
             }
         }
@@ -192,7 +191,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
      */
     private boolean unload() {
         unregisterPluginCommands();
-        registeredListeners.forEach(HandlerList::unregisterAll);
+        HandlerList.unregisterAll(this);
         registeredListeners.clear();
         // Unregister all extension listeners that isn't using the method Duels#registerListener
         HandlerList.getRegisteredListeners(this)
@@ -214,7 +213,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
                 loadable.handleUnload();
                 logManager.debug(name + " has been unloaded. (took " + (System.currentTimeMillis() - now) + "ms)");
             } catch (Exception ex) {
-                sendMessage("&c&lThere was an error while unloading " + name + "! If you believe this is an issue from the plugin, please contact the developer.");
+                Log.error("There was an error while unloading " + name + "! If you believe this is an issue from the plugin, please contact the developer.");
                 return false;
             }
         }
@@ -259,14 +258,11 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         }
 
         if (removed > 0) {
-            getLogger().info("Unregistered " + removed + " stale command entries from command map.");
+            logManager.debug("Unregistered " + removed + " stale command entries from command map.");
         }
     }
 
     private void registerAllCommands() {
-        sendMessage("&eRegistering commands...");
-        long start = System.currentTimeMillis();
-
         // Build commands based on commands.yml
         final CommandsConfig.CommandSettings duel = commandsConfig.get(CommandsConfig.CommandKey.DUEL);
         final CommandsConfig.CommandSettings party = commandsConfig.get(CommandsConfig.CommandKey.PARTY);
@@ -291,15 +287,13 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
             new DuelsCommand(this, duels),
             new KitCommand(this, kit)
         );
-
-        sendMessage("&dSuccessfully registered commands [" + CC.getTimeDifferenceAndColor(start, System.currentTimeMillis()) + ChatColor.WHITE + "]");
     }
 
     @SafeVarargs
     private void registerCommands(final AbstractCommand<DuelsPlugin>... commands) {
         final CommandMap commandMap = getCommandMap();
         if (commandMap == null) {
-            getLogger().severe("Could not access Bukkit CommandMap for dynamic registration.");
+            logManager.log(Level.SEVERE, "Could not access Bukkit CommandMap for dynamic registration.");
             return;
         }
 
@@ -310,7 +304,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
             this.commands.put(command.getName().toLowerCase(), command);
             final PluginCommand pc = createPluginCommand(command.getName());
             if (pc == null) {
-                getLogger().warning("Failed to create PluginCommand for '" + command.getName() + "'. Skipping.");
+                logManager.log(Level.WARNING, "Failed to create PluginCommand for '" + command.getName() + "'. Skipping.");
                 continue;
             }
             pc.setAliases(command.getAliases());
@@ -334,7 +328,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
                 }
             }
 
-            getLogger().info("Registered command: /" + command.getName() + 
+            logManager.debug("Registered command: /" + command.getName() + 
                            (command.getAliases().isEmpty() ? "" : " (aliases: " + String.join(", ", command.getAliases()) + ")"));
         }
     }
@@ -423,28 +417,22 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
 
         final String commandLower = command.toLowerCase();
         
-        // Debug logging
-        getLogger().info("Attempting to register subcommand '" + subCommand.getName() + "' to parent command '" + commandLower + "'");
-        getLogger().info("Available commands: " + commands.keySet());
-        getLogger().info("Command key mappings: " + commandKeyMap);
-        
         // Try direct lookup first, then check if it's an original key that maps to a different name
         AbstractCommand<DuelsPlugin> result = commands.get(commandLower);
         if (result == null) {
             final String mappedName = commandKeyMap.get(commandLower);
-            getLogger().info("Direct lookup failed, trying mapped name: " + mappedName);
             if (mappedName != null) {
                 result = commands.get(mappedName);
             }
         }
 
         if (result == null) {
-            getLogger().warning("Could not find parent command '" + commandLower + "' for subcommand '" + subCommand.getName() + "'");
+            logManager.debug("Could not find parent command '" + commandLower + "' for subcommand '" + subCommand.getName() + "'");
             return false;
         }
         
         if (result.isChild(subCommand.getName().toLowerCase())) {
-            getLogger().warning("Subcommand '" + subCommand.getName() + "' is already registered to '" + commandLower + "'");
+            logManager.debug("Subcommand '" + subCommand.getName() + "' is already registered to '" + commandLower + "'");
             return false;
         }
 
@@ -455,20 +443,15 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
             }
         });
         
-        getLogger().info("Successfully registered subcommand '" + subCommand.getName() + "' to '" + commandLower + "'");
+        logManager.debug("Successfully registered subcommand '" + subCommand.getName() + "' to '" + commandLower + "'");
         return true;
     }
 
     @Override
     public void registerListener(@NotNull final Listener listener) {
-        sendMessage("&eRegistering post listeners...");
-        long start = System.currentTimeMillis();
-
         Objects.requireNonNull(listener, "listener");
         registeredListeners.add(listener);
         Bukkit.getPluginManager().registerEvents(listener, this);
-
-        sendMessage("&dSuccessfully registered listeners after plugin startup in [" + CC.getTimeDifferenceAndColor(start, System.currentTimeMillis()) + ChatColor.WHITE + "]");
     }
 
     @Override
@@ -496,7 +479,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
             loadable.handleLoad();
             return true;
         } catch (Exception ex) {
-            sendMessage("&c&lThere was an error while " + (unloaded ? "loading " : "unloading ")
+            Log.error("There was an error while " + (unloaded ? "loading " : "unloading ")
                     + loadable.getClass().getSimpleName()
                     + "! If you believe this is an issue from the plugin, please contact the developer.");
             return false;
@@ -607,7 +590,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         try {
             logManager = new LogManager(this);
         } catch (IOException ex) {
-            sendMessage("&cFailed to load LogManager.");
+            Log.error("Failed to load LogManager.");
             LOGGER.log(Level.SEVERE, "Could not load LogManager.", ex);
             getServer().getPluginManager().disablePlugin(this);
             return;
@@ -618,17 +601,15 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         try {
             Class.forName("org.spigotmc.SpigotConfig");
         } catch (ClassNotFoundException ex) {
-            sendMessage("&c&l================= *** LOAD FAILURE *** =================");
-            sendMessage("&c&lReDuels requires a spigot server to run!");
-            sendMessage("&c&lTo run your server on spigot, follow this guide: " + SPIGOT_INSTALLATION_URL);
-            sendMessage("&c&l================= *** LOAD FAILURE *** =================");
+            Log.error("================= *** LOAD FAILURE *** =================");
+            Log.error("ReDuels requires a spigot server to run!");
+            Log.error("To run your server on spigot, follow this guide: " + SPIGOT_INSTALLATION_URL);
+            Log.error("================= *** LOAD FAILURE *** =================");
             getServer().getPluginManager().disablePlugin(this);
         }
     }
 
     private void initLoadables() {
-        long start = System.currentTimeMillis();
-
         loadAndTrack("config", () -> loadables.add(configuration = new Config(this)));
         loadAndTrack("commands config", () -> loadables.add(commandsConfig = new CommandsConfig(this)));
         loadAndTrack("lang", () -> loadables.add(lang = new Lang(this)));
@@ -659,7 +640,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         try {
             task.run();
         } catch (Exception e) {
-            sendMessage("&cFailed to load " + name + ": " + e.getMessage());
+            Log.error("Failed to load " + name + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -670,7 +651,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
             lastLoad = loadables.indexOf(extensionManager);
             extensionManager.handleLoad();
         } catch (Exception e) {
-            sendMessage("&cFailed to load extensions: " + e.getMessage());
+            Log.error("Failed to load extensions: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -690,21 +671,7 @@ public class DuelsPlugin extends JavaPlugin implements Duels, LogSource {
         registerListener(new KitEditListener(this));
     }
 
-    private void checkForUpdatesAndMetrics() {
+    private void checkForMetrics() {
         new Metrics(this, BSTATS_ID);
-
-        if (!configuration.isCheckForUpdates()) {
-            return;
-        }
-
-        this.updateManager = new UpdateManager(this);
-        this.updateManager.checkForUpdate();
-        if (updateManager.updateIsAvailable()){
-            sendMessage("&a===============================================");
-            sendMessage("&aAn update for " + getName() + " is available!");
-            sendMessage("&aDownload " + getName() + " v" + updateManager.getLatestVersion() + " here:");
-            sendMessage("&e" + getDescription().getWebsite());
-            sendMessage("&a===============================================");
-        }
     }
 }
